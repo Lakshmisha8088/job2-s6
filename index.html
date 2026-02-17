@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +10,10 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet">
+
     <style>
         /* 
          * DESIGN TOKENS 
@@ -38,10 +41,11 @@
             /* Typography */
             --font-serif: 'Playfair Display', serif;
             --font-sans: 'Inter', sans-serif;
-            
+
             /* UI Properties */
             --radius: 4px;
             --transition: all 180ms ease-in-out;
+            --nav-height: 64px;
         }
 
         /* 
@@ -65,382 +69,289 @@
             flex-direction: column;
         }
 
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             font-family: var(--font-serif);
             font-weight: 700;
             line-height: 1.2;
             color: var(--text-primary);
         }
 
-        p {
-            max-width: 720px;
-            margin-bottom: var(--space-2);
-        }
-
         /* 
-         * UTILITIES 
+         * NAVIGATION 
          */
-        .container {
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 var(--space-3);
-        }
-
-        /* 
-         * COMPONENTS 
-         */
-        
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-1);
-            padding: 10px 20px;
-            font-family: var(--font-sans);
-            font-weight: 500;
-            font-size: 14px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            border: 1px solid transparent;
-        }
-
-        .btn-primary {
-            background-color: var(--accent);
-            color: white;
-            border-color: var(--accent);
-        }
-
-        .btn-primary:hover {
-            background-color: var(--accent-hover);
-            border-color: var(--accent-hover);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--accent);
-            border-color: var(--accent);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(139, 0, 0, 0.05);
-        }
-
-        .btn-icon {
-            padding: 8px;
-        }
-
-        /* Cards */
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: var(--space-3);
-            transition: var(--transition);
-        }
-
-        /* Inputs */
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: var(--space-2);
-        }
-
-        .input-label {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .input-field {
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            font-family: var(--font-sans);
-            font-size: 15px;
-            background-color: white;
-            transition: var(--transition);
-            width: 100%;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        /* 
-         * LAYOUT STRUCTURE 
-         */
-        
-        /* Top Bar */
         .top-bar {
-            height: 64px;
+            height: var(--nav-height);
             border-bottom: 1px solid var(--border);
             background-color: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 var(--space-4);
-        }
-
-        .project-name {
-            font-weight: 600;
-            font-size: 15px;
-            letter-spacing: -0.01em;
-        }
-
-        .progress-indicator {
-            font-family: var(--font-serif);
-            font-size: 15px;
-            color: var(--text-secondary);
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 99px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .status-badge.in-progress {
-            background-color: rgba(245, 124, 0, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(245, 124, 0, 0.2);
-        }
-
-        /* Main Content Grid */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 70% 30%;
-            flex: 1;
-            height: calc(100vh - 64px - 64px); /* Minus top bar and footer */
-            overflow: hidden;
-        }
-
-        .primary-workspace {
-            padding: var(--space-4);
-            overflow-y: auto;
-            border-right: 1px solid var(--border);
-        }
-
-        .secondary-panel {
-            padding: var(--space-3);
-            background-color: #FAFAFA;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-3);
-        }
-
-        /* Context Header */
-        .context-header {
-            margin-bottom: var(--space-4);
-        }
-
-        .context-header h1 {
-            font-size: 32px;
-            margin-bottom: var(--space-1);
-        }
-
-        .context-header p {
-            font-size: 16px;
-            color: var(--text-secondary);
-        }
-
-        /* Footer */
-        .proof-footer {
-            height: 72px;
-            border-top: 1px solid var(--border);
-            background-color: var(--bg-card);
-            display: flex;
-            align-items: center;
-            padding: 0 var(--space-4);
-            gap: var(--space-4);
             position: sticky;
-            bottom: 0;
-            z-index: 10;
+            top: 0;
+            z-index: 100;
         }
 
-        .checklist-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .checklist-checkbox {
-            width: 16px;
-            height: 16px;
-            border: 1px solid var(--border);
-            border-radius: 2px;
-            display: grid;
-            place-items: center;
-            cursor: cursor;
-        }
-        
-        .checklist-checkbox.checked {
-            background-color: var(--success);
-            border-color: var(--success);
-            color: white;
-        }
-
-        /* Utility specific for demo */
-        .panel-section {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-        }
-        
-        .panel-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-secondary);
+        .brand {
             font-weight: 600;
+            font-size: 16px;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+            text-decoration: none;
         }
 
-        .code-block {
-            background: #f0f0f0;
-            padding: 12px;
-            border-radius: var(--radius);
-            font-family: monospace;
-            font-size: 13px;
-            color: #333;
-            border: 1px solid var(--border);
+        .nav-links {
+            display: flex;
+            gap: var(--space-4);
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            padding: 20px 0;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: var(--text-primary);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            display: none;
+            position: absolute;
+            top: var(--nav-height);
+            left: 0;
+            width: 100%;
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: var(--space-2) 0;
+            flex-direction: column;
+            z-index: 99;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-nav-link {
+            padding: var(--space-2) var(--space-4);
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .mobile-nav-link.active {
+            color: var(--accent);
+            background-color: rgba(139, 0, 0, 0.05);
+            border-left: 4px solid var(--accent);
+        }
+
+        /* 
+         * LAYOUT & SECTIONS 
+         */
+        .main-container {
+            flex: 1;
+            padding: var(--space-5) var(--space-4);
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            margin-bottom: var(--space-5);
+            text-align: center;
+        }
+
+        .page-title {
+            font-size: 48px;
+            margin-bottom: var(--space-2);
+        }
+
+        .page-subtext {
+            color: var(--text-secondary);
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hamburger {
+                display: block;
+            }
+
+            .page-title {
+                font-size: 32px;
+            }
+
+            .main-container {
+                padding: var(--space-4) var(--space-3);
+            }
         }
     </style>
 </head>
+
 <body>
 
-    <!-- TOP BAR -->
-    <header class="top-bar">
-        <div class="project-name">KodNest Premium</div>
-        <div class="progress-indicator">Step 3 / 8</div>
-        <div class="status-badge in-progress">
-            <i class="ph-fill ph-circle"></i> In Progress
+    <!-- NAVIGATION -->
+    <nav class="top-bar">
+        <a href="#dashboard" class="brand">KodNest Premium</a>
+
+        <!-- Desktop Nav -->
+        <div class="nav-links">
+            <a href="#dashboard" class="nav-link" data-link="dashboard">Dashboard</a>
+            <a href="#saved" class="nav-link" data-link="saved">Saved</a>
+            <a href="#digest" class="nav-link" data-link="digest">Digest</a>
+            <a href="#settings" class="nav-link" data-link="settings">Settings</a>
+            <a href="#proof" class="nav-link" data-link="proof">Proof</a>
         </div>
-    </header>
 
-    <!-- CONTENT GRID -->
-    <main class="main-layout">
-        
-        <!-- PRIMARY WORKSPACE (70%) -->
-        <section class="primary-workspace">
-            
-            <!-- CONTEXT HEADER -->
-            <div class="context-header">
-                <h1>Data Model Definition</h1>
-                <p>Define the core schema for your SaaS application. Focus on accuracy and scalability.</p>
+        <!-- Mobile Hamburger -->
+        <div class="hamburger" onclick="toggleMobileMenu()">
+            <i class="ph ph-list"></i>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU DROPDOWN -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#dashboard" class="mobile-nav-link" data-link="dashboard" onclick="toggleMobileMenu()">Dashboard</a>
+        <a href="#saved" class="mobile-nav-link" data-link="saved" onclick="toggleMobileMenu()">Saved</a>
+        <a href="#digest" class="mobile-nav-link" data-link="digest" onclick="toggleMobileMenu()">Digest</a>
+        <a href="#settings" class="mobile-nav-link" data-link="settings" onclick="toggleMobileMenu()">Settings</a>
+        <a href="#proof" class="mobile-nav-link" data-link="proof" onclick="toggleMobileMenu()">Proof</a>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-container">
+
+        <!-- DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view-section">
+            <div class="page-header">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtext">This section will be built in the next step.</p>
             </div>
-
-            <!-- WORKSPACE CONTENT -->
-            <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-                
-                <div class="card">
-                    <h3 style="margin-bottom: var(--space-2); font-size: 20px;">User Entity</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
-                        <div class="input-group">
-                            <label class="input-label">Field Name</label>
-                            <input type="text" class="input-field" value="email" readonly>
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">Type</label>
-                            <input type="text" class="input-field" value="String" readonly>
-                        </div>
-                    </div>
-                    <div style="margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: var(--space-1);">
-                        <button class="btn btn-secondary">Cancel</button>
-                        <button class="btn btn-primary">Save Entity</button>
-                    </div>
-                </div>
-
-                <div class="card" style="opacity: 0.7;">
-                    <h3 style="margin-bottom: var(--space-2); font-size: 20px; color: var(--text-secondary);">Subscription Entity</h3>
-                    <p style="font-size: 14px; color: var(--text-secondary);">Click to edit this entity schema configuration.</p>
-                </div>
-
-                <!-- Empty State Example -->
-                <div style="border: 1px dashed var(--border); border-radius: var(--radius); padding: var(--space-4); text-align: center; color: var(--text-secondary);">
-                    <i class="ph ph-plus" style="font-size: 24px; margin-bottom: 8px;"></i>
-                    <p style="margin: 0;">No integrations connected. Add a payment provider to start.</p>
-                    <button class="btn btn-secondary" style="margin-top: 16px;">Connect Stripe</button>
-                </div>
-
-            </div>
-
         </section>
 
-        <!-- SECONDARY PANEL (30%) -->
-        <aside class="secondary-panel">
-            
-            <div class="panel-section">
-                <div class="panel-title">Current Objective</div>
-                <p style="font-size: 14px; line-height: 1.5;">Review the proposed data model for the User and Subscription entities. Ensure all relationships are correctly defined before generating the migration scripts.</p>
+        <!-- SAVED VIEW -->
+        <section id="view-saved" class="view-section">
+            <div class="page-header">
+                <h1 class="page-title">Saved Jobs</h1>
+                <p class="page-subtext">This section will be built in the next step.</p>
             </div>
+        </section>
 
-            <div class="panel-section">
-                <div class="panel-title">AI Prompt</div>
-                <div class="code-block">
-                    Create a Supabase migration for the User table with email, password_hash, and subscription_tier fields.
-                </div>
-                <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
-                    <i class="ph ph-copy"></i> Copy Prompt
-                </button>
+        <!-- DIGEST VIEW -->
+        <section id="view-digest" class="view-section">
+            <div class="page-header">
+                <h1 class="page-title">Daily Digest</h1>
+                <p class="page-subtext">This section will be built in the next step.</p>
             </div>
+        </section>
 
-            <hr style="border: 0; border-top: 1px solid var(--border);">
-
-            <div class="panel-section">
-                <div class="panel-title">Actions</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <button class="btn btn-primary" style="grid-column: span 2;">
-                        <i class="ph ph-lightning"></i> Build in Lovable
-                    </button>
-                    <button class="btn btn-secondary">
-                        <i class="ph ph-check"></i> It Worked
-                    </button>
-                    <button class="btn btn-secondary" style="color: var(--error); border-color: var(--error);">
-                        <i class="ph ph-warning"></i> Error
-                    </button>
-                </div>
+        <!-- SETTINGS VIEW -->
+        <section id="view-settings" class="view-section">
+            <div class="page-header">
+                <h1 class="page-title">Settings</h1>
+                <p class="page-subtext">This section will be built in the next step.</p>
             </div>
+        </section>
 
-        </aside>
+        <!-- PROOF VIEW -->
+        <section id="view-proof" class="view-section">
+            <div class="page-header">
+                <h1 class="page-title">Proof of Work</h1>
+                <p class="page-subtext">This section will be built in the next step.</p>
+            </div>
+        </section>
 
     </main>
 
-    <!-- PROOF FOOTER -->
-    <footer class="proof-footer">
-        <div class="checklist-item">
-            <div class="checklist-checkbox checked"><i class="ph-bold ph-check"></i></div>
-            <span>UI Built</span>
-        </div>
-        <div class="checklist-item">
-            <div class="checklist-checkbox checked"><i class="ph-bold ph-check"></i></div>
-            <span>Logic Working</span>
-        </div>
-        <div class="checklist-item">
-            <div class="checklist-checkbox"></div>
-            <span>Test Passed</span>
-        </div>
-        <div class="checklist-item">
-            <div class="checklist-checkbox"></div>
-            <span>Deployed</span>
-        </div>
-        <div style="margin-left: auto;">
-             <button class="btn btn-primary" disabled style="opacity: 0.5;">Ship Feature</button>
-        </div>
-    </footer>
+    <script>
+        // ROUTING LOGIC
+        function handleRoute() {
+            // Get hash or default to dashboard
+            const hash = window.location.hash.slice(1) || 'dashboard';
 
+            // Normalize routes
+            const validRoutes = ['dashboard', 'saved', 'digest', 'settings', 'proof'];
+            const currentRoute = validRoutes.includes(hash) ? hash : 'dashboard';
+
+            // Update View
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            const activeSection = document.getElementById(`view-${currentRoute}`);
+            if (activeSection) activeSection.classList.add('active');
+
+            // Update Nav State (Desktop)
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.link === currentRoute) link.classList.add('active');
+            });
+
+            // Update Nav State (Mobile)
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.link === currentRoute) link.classList.add('active');
+            });
+        }
+
+        // MOBILE MENU LOGIC
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('open');
+        }
+
+        // INIT
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('load', handleRoute);
+    </script>
 </body>
+
 </html>
