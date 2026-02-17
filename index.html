@@ -625,6 +625,14 @@
                     <option value="match">Match Score</option>
                     <option value="salary">Salary (High-Low)</option>
                 </select>
+                <select id="filter-status" class="input-field"
+                    style="border-color: var(--accent); color: var(--accent); font-weight: 500;">
+                    <option value="">All Statuses</option>
+                    <option value="Not Applied">Not Applied</option>
+                    <option value="Applied">Applied</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Selected">Selected</option>
+                </select>
             </div>
 
             <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
@@ -766,6 +774,14 @@
                 <!-- Digest Content -->
                 <div id="digest-list" style="display: flex; flex-direction: column; gap: 24px;">
                     <!-- Items go here -->
+                </div>
+
+                <!-- Status Updates Section -->
+                <div id="digest-status-updates"
+                    style="margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--border); display: none;">
+                    <h4 style="font-family: var(--font-serif); margin-bottom: 16px;">Recent Status Updates</h4>
+                    <div id="digest-status-list"
+                        style="font-size: 14px; display: flex; flex-direction: column; gap: 12px;"></div>
                 </div>
 
                 <!-- Email Footer -->
@@ -1033,11 +1049,81 @@
         let savedJobs = JSON.parse(localStorage.getItem('savedJobs')) || [];
 
         // --- RENDER LOGIC ---
+        // --- CUSTOM TOAST ---
+        function showToast(message) {
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.style.cssText = "position: fixed; bottom: 32px; right: 32px; background: #323232; color: white; padding: 12px 24px; border-radius: 4px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 1000;";
+                document.body.appendChild(toast);
+            }
+            toast.innerText = message;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        // --- STATUS MANAGER ---
+        let jobStatuses = {}; // { jobId: { status: "Applied", date: "YYYY-MM-DD" } }
+
+        function loadStatuses() {
+            const saved = localStorage.getItem('jobTrackerStatus');
+            if (saved) {
+                try {
+                    jobStatuses = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Error loading statuses", e);
+                }
+            }
+        }
+
+        function updateStatus(jobId, newStatus) {
+            const job = allJobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            if (newStatus === "") newStatus = "Not Applied";
+
+            jobStatuses[jobId] = {
+                status: newStatus,
+                date: new Date().toISOString().split('T')[0],
+                title: job.title,
+                company: job.company
+            };
+
+            if (newStatus === "Not Applied") {
+                delete jobStatuses[jobId];
+                showToast("Status cleared");
+            } else {
+                showToast(`Status updated: ${newStatus}`);
+            }
+
+            localStorage.setItem('jobTrackerStatus', JSON.stringify(jobStatuses));
+            renderDashboard();
+            renderSaved();
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Applied': return '#1976D2'; // Blue
+                case 'Rejected': return '#D32F2F'; // Red
+                case 'Selected': return '#388E3C'; // Green
+                default: return '#757575'; // Grey/Neutral
+            }
+        }
+
+        // --- RENDER LOGIC ---
         function renderJobCard(job) {
             const isNew = job.postedDaysAgo <= 2;
             const isSaved = savedJobs.includes(job.id);
             const score = calculateMatchScore(job);
             const scoreColor = getScoreColor(score);
+
+            // Status Logic
+            const statusObj = jobStatuses[job.id] || { status: 'Not Applied' };
+            const currentStatus = statusObj.status;
+            const statusColor = getStatusColor(currentStatus);
 
             // Inline SVG for robustness
             const bookmarkIcon = isSaved
@@ -1045,7 +1131,7 @@
                 : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="var(--text-secondary)" viewBox="0 0 256 256"><path d="M192,24H64A16,16,0,0,0,48,40V216a16,16,0,0,0,16,16,16,16,0,0,0,11.31-4.69l52.69-52.68,52.69,52.68A16,16,0,0,0,192,232a16,16,0,0,0,16-16V40A16,16,0,0,0,192,24Zm0,192-64-64-64,64V40H192Z"></path></svg>`;
 
             return `
-                <div class="job-card">
+                <div class="job-card" style="border-left: 4px solid ${currentStatus !== 'Not Applied' ? statusColor : 'transparent'};">
                     <div class="job-header">
                         <div>
                             <div class="job-title">${job.title}</div>
@@ -1064,6 +1150,15 @@
                         <span class="badge" style="background: #f0f0f0;">${job.experience}</span>
                         ${isNew ? '<span class="badge new">New</span>' : ''}
                         <span class="badge source">${job.source}</span>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <select onchange="updateStatus('${job.id}', this.value)" style="font-size:12px; padding:4px; border-radius:4px; border:1px solid #ddd; background:white; cursor:pointer; width:100%; color:${statusColor}; font-weight:600;">
+                            <option value="Not Applied" ${currentStatus === 'Not Applied' ? 'selected' : ''}>Status: Not Applied</option>
+                            <option value="Applied" ${currentStatus === 'Applied' ? 'selected' : ''}>Status: Applied</option>
+                            <option value="Rejected" ${currentStatus === 'Rejected' ? 'selected' : ''}>Status: Rejected</option>
+                            <option value="Selected" ${currentStatus === 'Selected' ? 'selected' : ''}>Status: Selected</option>
+                        </select>
                     </div>
 
                     <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
@@ -1098,6 +1193,7 @@
             const experience = document.getElementById('filter-experience').value;
             const source = document.getElementById('filter-source').value;
             const sort = document.getElementById('filter-sort').value;
+            const statusFilter = document.getElementById('filter-status') ? document.getElementById('filter-status').value : '';
             const onlyMatches = document.getElementById('filter-match-toggle').checked;
 
             // Filter Data
@@ -1108,18 +1204,21 @@
                 const matchExp = experience ? job.experience === experience : true;
                 const matchSource = source ? job.source === source : true;
 
+                // Status Filter
+                const jobStatus = (jobStatuses[job.id]?.status) || 'Not Applied';
+                const matchStatus = statusFilter ? jobStatus === statusFilter : true;
+
                 // Match Score Filter
                 const score = calculateMatchScore(job);
                 const matchScore = onlyMatches ? score >= preferences.minScore : true;
 
-                return matchSearch && matchLoc && matchMode && matchExp && matchSource && matchScore;
+                return matchSearch && matchLoc && matchMode && matchExp && matchSource && matchScore && matchStatus;
             });
 
             // Sort Data
             if (sort === 'newest') {
                 filtered.sort((a, b) => a.postedDaysAgo - b.postedDaysAgo);
             } else if (sort === 'salary') {
-                // Simple string sort approx for prototype
                 filtered.sort((a, b) => b.salaryRange.localeCompare(a.salaryRange));
             } else if (sort === 'match') {
                 filtered.sort((a, b) => calculateMatchScore(b) - calculateMatchScore(a));
@@ -1324,6 +1423,7 @@
         window.addEventListener('hashchange', handleRoute);
         window.addEventListener('DOMContentLoaded', () => {
             loadPreferences();
+            loadStatuses(); // Load statuses
 
             // Generate Data
             if (allJobs.length === 0) {
@@ -1331,7 +1431,7 @@
             }
 
             // Attach Filter Listeners
-            const filters = ['filter-search', 'filter-location', 'filter-mode', 'filter-experience', 'filter-source', 'filter-sort', 'filter-match-toggle'];
+            const filters = ['filter-search', 'filter-location', 'filter-mode', 'filter-experience', 'filter-source', 'filter-sort', 'filter-status', 'filter-match-toggle'];
             filters.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('input', renderDashboard);
