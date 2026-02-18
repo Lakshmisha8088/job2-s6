@@ -173,12 +173,118 @@ const generateQuestions = (extractedSkills) => {
     return finalQs;
 };
 
+// --- New Intel Logic (Phase 3) ---
+
+const KNOWN_ENTERPRISES = [
+    'google', 'amazon', 'facebook', 'meta', 'apple', 'netflix', 'microsoft',
+    'tcs', 'infosys', 'wipro', 'accenture', 'cognizant', 'capgemini',
+    'jpmorgan', 'goldman sachs', 'morgan stanley', 'adobe', 'salesforce',
+    'oracle', 'ibm', 'cisco', 'intel', 'nvidia', 'uber', 'airbnb', 'stripe', 'deloitte', 'pwc', 'ey', 'kpmg'
+];
+
+const generateCompanyIntel = (companyName) => {
+    const normalize = (companyName || '').toLowerCase().trim();
+
+    // Defaults
+    let size = 'Startup';
+    let industry = 'Technology';
+    let focus = 'Rapid feature development, Full-stack ownership, Practical problem solving';
+
+    if (!normalize) return { size, industry, focus };
+
+    // Heuristics
+    if (KNOWN_ENTERPRISES.some(k => normalize.includes(k))) {
+        size = 'Enterprise';
+        focus = 'Scalability, System Design, Core CS fundamentals, Optimization';
+    } else if (normalize.includes('bank') || normalize.includes('financial')) {
+        size = 'Enterprise';
+        industry = 'FinTech / Banking';
+        focus = 'Security, Transaction consistency, High availability';
+    } else if (normalize.includes('startup')) {
+        size = 'Startup';
+    }
+
+    return { size, industry, focus };
+};
+
+const generateRoundMapping = (extractedSkills, companyIntel) => {
+    const rounds = [];
+    const isEnterprise = companyIntel.size === 'Enterprise';
+    const flatSkills = Object.values(extractedSkills).flat();
+    const topStack = flatSkills.length > 0 ? flatSkills[0] : 'Coding';
+
+    // Round 1
+    if (isEnterprise) {
+        rounds.push({
+            name: 'Online Assessment',
+            type: 'Screening',
+            desc: '60-90 min coding test on HackerRank/CodeSignal',
+            purpose: 'Filters candidates based on raw DSA / Aptitude skills.'
+        });
+    } else {
+        rounds.push({
+            name: 'Screening / Take-home',
+            type: 'Practical',
+            desc: 'Resume screen followed by a practical coding task via email',
+            purpose: 'Validates ability to build actual features, not just invert binary trees.'
+        });
+    }
+
+    // Round 2
+    if (isEnterprise) {
+        rounds.push({
+            name: 'Technical Round 1 (DSA)',
+            type: 'Technical',
+            desc: 'Live coding: Trees, Graphs, DP, or Array manipulation',
+            purpose: 'Tests algorithmic thinking and edge-case handling.'
+        });
+    } else {
+        rounds.push({
+            name: `Machine Coding (${topSkill = topStack.toUpperCase()})`,
+            type: 'Technical',
+            desc: `Build a small feature using ${topStack} in 1 hour`,
+            purpose: 'Tests coding speed, cleanliness, and framework knowledge.'
+        });
+    }
+
+    // Round 3
+    if (isEnterprise) {
+        rounds.push({
+            name: 'System Design / Low Level Design',
+            type: 'Design',
+            desc: 'Design a parking lot, rate limiter, or twitter feed',
+            purpose: 'Tests ability to structure scalable systems (LLD for freshers).'
+        });
+    } else {
+        rounds.push({
+            name: 'Architecture & Discussion',
+            type: 'Design',
+            desc: 'Discuss past projects and potential system improvements',
+            purpose: 'Tests depth of understanding and ownership.'
+        });
+    }
+
+    // Round 4
+    rounds.push({
+        name: 'Managerial / Culture Fit',
+        type: 'Behavioral',
+        desc: 'Discussion with Engineering Manager',
+        purpose: 'Ensures you share the company values and have a growth mindset.'
+    });
+
+    return rounds;
+};
+
 export const analyzeJD = (jdText, company = '', role = '') => {
     const { extracted, flatFound } = extractSkills(jdText);
     const score = calculateScore(extracted, company, role, jdText);
     const plan = generatePlan(flatFound, extracted);
     const checklist = generateChecklist(flatFound);
     const questions = generateQuestions(extracted);
+
+    // New Phase 3 Calls
+    const companyIntel = generateCompanyIntel(company);
+    const roundMapping = generateRoundMapping(extracted, companyIntel);
 
     return {
         id: Date.now().toString(),
@@ -191,6 +297,8 @@ export const analyzeJD = (jdText, company = '', role = '') => {
         readinessScore: score,
         plan,
         checklist,
-        questions
+        questions,
+        companyIntel,
+        roundMapping
     };
 };

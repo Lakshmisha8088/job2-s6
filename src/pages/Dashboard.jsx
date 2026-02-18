@@ -5,7 +5,7 @@ import { Progress } from '../components/ui/Progress';
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
-import { Play, FileText, CheckCircle, Search, Clock, ArrowLeft, ChevronRight, BarChart2, Download, Copy, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
+import { Play, FileText, CheckCircle, Search, Clock, ArrowLeft, ChevronRight, BarChart2, Download, Copy, ThumbsUp, ThumbsDown, AlertCircle, Building2, GitCommit, Zap } from 'lucide-react';
 import { analyzeJD } from '../utils/analysisLogic';
 import { saveAnalysisResult, getAnalysisHistory, updateAnalysisResult } from '../utils/storage';
 
@@ -257,8 +257,8 @@ export const DashboardHome = () => {
                                                             key={skill}
                                                             onClick={() => handleSkillToggle(skill)}
                                                             className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 transition-all duration-200 ${status === 'know'
-                                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
-                                                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                                                                 }`}
                                                         >
                                                             {status === 'know' ? <ThumbsUp size={12} /> : <ThumbsDown size={12} />}
@@ -296,6 +296,82 @@ export const DashboardHome = () => {
                         >
                             Copy Full Plan
                         </button>
+                    </div>
+                )}
+
+                {/* Phase 3: Company Intel & Round Mapping */}
+                {currentResult.companyIntel && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Company Intel Card */}
+                        <Card className={`md:col-span-1 text-white border-0 ${currentResult.companyIntel.size === 'Enterprise'
+                            ? 'bg-gradient-to-br from-blue-600 to-indigo-700'
+                            : 'bg-gradient-to-br from-purple-600 to-pink-600'
+                            }`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-white">
+                                    <Building2 size={20} /> Company Intel
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <p className="text-white/80 text-xs uppercase font-bold tracking-wider">Type</p>
+                                    <p className="text-xl font-bold">{currentResult.companyIntel.size}</p>
+                                </div>
+                                <div>
+                                    <p className="text-white/80 text-xs uppercase font-bold tracking-wider">Industry</p>
+                                    <p className="font-medium">{currentResult.companyIntel.industry}</p>
+                                </div>
+                                <div>
+                                    <p className="text-white/80 text-xs uppercase font-bold tracking-wider">Hiring Focus</p>
+                                    <p className="text-sm leading-relaxed mt-1 text-white/90">{currentResult.companyIntel.focus}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Round Timeline */}
+                        <Card className="md:col-span-2">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <GitCommit size={20} className="rotate-90" /> Expected Interview Flow
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-0">
+                                    {currentResult.roundMapping && currentResult.roundMapping.map((round, index) => (
+                                        <div key={index} className="flex gap-4 relative pb-8 last:pb-0">
+                                            {/* Connecting Line */}
+                                            {index !== currentResult.roundMapping.length - 1 && (
+                                                <div className="absolute left-[19px] top-8 bottom-0 w-0.5 bg-slate-200"></div>
+                                            )}
+
+                                            {/* Icon/Dot */}
+                                            <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm shadow-sm z-10 ${round.type === 'Screening' ? 'bg-blue-100 text-blue-600' :
+                                                round.type === 'Technical' ? 'bg-indigo-100 text-indigo-600' :
+                                                    round.type === 'Design' ? 'bg-purple-100 text-purple-600' :
+                                                        'bg-emerald-100 text-emerald-600'
+                                                }`}>
+                                                {index + 1}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div>
+                                                <h4 className="font-bold text-slate-900">{round.name}</h4>
+                                                <div className="flex items-center gap-2 mt-1 mb-2">
+                                                    <span className="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded uppercase">
+                                                        {round.type}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-slate-600 mb-1">{round.desc}</p>
+                                                <div className="flex items-start gap-1.5 text-xs text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100 italic">
+                                                    <Zap size={14} className="shrink-0 mt-0.5" />
+                                                    <span>{round.purpose}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
 
@@ -365,6 +441,10 @@ export const DashboardHome = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                <div className="text-center pt-8 pb-4 text-xs text-slate-400">
+                    <p>Demo Mode: Company intel & rounds are generated heuristically based on industry patterns.</p>
+                </div>
             </div>
         );
     };
@@ -386,12 +466,21 @@ export const DashboardHome = () => {
                             {history.map(item => (
                                 <div key={item.id} className="py-4 flex items-center justify-between hover:bg-slate-50 p-2 rounded transition-colors cursor-pointer" onClick={() => handleViewHistoryItem(item)}>
                                     <div>
-                                        <h4 className="font-bold text-slate-900">{item.company || "Unknown Company"} <span className="text-slate-400 font-normal">| {item.role || "Unknown Role"}</span></h4>
+                                        <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                                            {item.company || "Unknown Company"}
+                                            <span className="text-slate-400 font-normal">| {item.role || "Unknown Role"}</span>
+                                            {item.companyIntel && (
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold ${item.companyIntel.size === 'Enterprise' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                                    }`}>
+                                                    {item.companyIntel.size}
+                                                </span>
+                                            )}
+                                        </h4>
                                         <p className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString()}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className={`px-3 py-1 rounded-full text-xs font-bold ${item.readinessScore > 75 ? 'bg-emerald-100 text-emerald-700' :
-                                                item.readinessScore > 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                                            item.readinessScore > 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                                             }`}>
                                             {item.readinessScore}% Ready
                                         </div>
@@ -467,7 +556,7 @@ export const DashboardHome = () => {
                                             <p className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</p>
                                         </div>
                                         <span className={`text-xs font-bold px-2 py-1 rounded ${item.readinessScore > 75 ? 'bg-emerald-100 text-emerald-700' :
-                                                item.readinessScore > 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                                            item.readinessScore > 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                                             }`}>
                                             {item.readinessScore}%
                                         </span>
