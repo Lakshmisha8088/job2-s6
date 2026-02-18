@@ -24,6 +24,24 @@ export const getAnalysisHistory = () => {
     }
 };
 
+export const updateAnalysisResult = (id, updates) => {
+    try {
+        const history = getAnalysisHistory();
+        const index = history.findIndex(item => item.id === id);
+
+        if (index === -1) return false;
+
+        // Merge updates into existing item
+        history[index] = { ...history[index], ...updates };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        return history[index];
+    } catch (e) {
+        console.error('Failed to update analysis result:', e);
+        return false;
+    }
+};
+
 export const clearHistory = () => {
     try {
         localStorage.removeItem(STORAGE_KEY);

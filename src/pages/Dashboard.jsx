@@ -5,9 +5,9 @@ import { Progress } from '../components/ui/Progress';
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
-import { Play, FileText, CheckCircle, Search, Clock, ArrowLeft, ChevronRight, BarChart2 } from 'lucide-react';
+import { Play, FileText, CheckCircle, Search, Clock, ArrowLeft, ChevronRight, BarChart2, Download, Copy, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
 import { analyzeJD } from '../utils/analysisLogic';
-import { saveAnalysisResult, getAnalysisHistory } from '../utils/storage';
+import { saveAnalysisResult, getAnalysisHistory, updateAnalysisResult } from '../utils/storage';
 
 // Mock Data for Radar Chart (Keep existing visualization for "Overall" context)
 const skillData = [
@@ -54,13 +54,70 @@ export const DashboardHome = () => {
     const [currentResult, setCurrentResult] = useState(null);
     const [formData, setFormData] = useState({ jdText: '', company: '', role: '' });
 
+    // Interactive State
+    const [skillConfidence, setSkillConfidence] = useState({}); // { "React": "know" | "practice" }
+    const [dynamicScore, setDynamicScore] = useState(0);
+
     useEffect(() => {
         setHistory(getAnalysisHistory());
     }, [view]);
 
+    // Initialize interactive state when a result is loaded
+    useEffect(() => {
+        if (currentResult) {
+            // Load existing confidence map or default to empty
+            const savedConfidence = currentResult.skillConfidence || {};
+            setSkillConfidence(savedConfidence);
+
+            // Initial score calculation
+            const base = currentResult.baseScore || currentResult.readinessScore;
+            // If baseScore isn't saved yet (legacy), use readinessScore as base and save it
+            if (!currentResult.baseScore) {
+                updateAnalysisResult(currentResult.id, { baseScore: base });
+            }
+
+            calculateDynamicScore(base, savedConfidence);
+        }
+    }, [currentResult]);
+
+    const calculateDynamicScore = (base, confidenceMap) => {
+        let score = base;
+        Object.values(confidenceMap).forEach(status => {
+            if (status === 'know') score += 2;
+            if (status === 'practice') score -= 2;
+        });
+        // Clamp between 0 and 100
+        setDynamicScore(Math.max(0, Math.min(100, score)));
+    };
+
+    const handleSkillToggle = (skill) => {
+        const currentStatus = skillConfidence[skill];
+        const newStatus = currentStatus === 'know' ? 'practice' : 'know'; // Toggle logic
+
+        const newConfidence = { ...skillConfidence, [skill]: newStatus };
+        setSkillConfidence(newConfidence);
+
+        // Update local state score
+        const base = currentResult.baseScore || currentResult.readinessScore;
+        calculateDynamicScore(base, newConfidence);
+
+        // Persist to storage
+        updateAnalysisResult(currentResult.id, {
+            skillConfidence: newConfidence,
+            readinessScore: Math.max(0, Math.min(100, base + (Object.values(newConfidence).filter(s => s === 'know').length * 2) - (Object.values(newConfidence).filter(s => s === 'practice').length * 2)))
+        });
+    };
+
+    // Default skills to "practice" if not set when rendered
+    const getSkillStatus = (skill) => {
+        return skillConfidence[skill] || 'practice';
+    };
+
     const handleAnalyze = () => {
         if (!formData.jdText.trim()) return;
         const result = analyzeJD(formData.jdText, formData.company, formData.role);
+        // Save initial result with baseScore
+        result.baseScore = result.readinessScore;
         saveAnalysisResult(result);
         setCurrentResult(result);
         setView('RESULTS');
@@ -70,6 +127,30 @@ export const DashboardHome = () => {
     const handleViewHistoryItem = (item) => {
         setCurrentResult(item);
         setView('RESULTS');
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+    };
+
+    const generateExportText = () => {
+        if (!currentResult) return '';
+        const basics = `Placement Readiness Report\nCompany: ${currentResult.company}\nRole: ${currentResult.role}\nScore: ${dynamicScore}/100\n\n`;
+        const skills = `Skills:\n${currentResult.flatSkills.map(s => `- ${s} (${getSkillStatus(s)})`).join('\n')}\n\n`;
+        const plan = `7-Day Plan:\n${currentResult.plan.map(d => `${d.day}: ${d.focus}\n${d.items.map(i => `  - ${i}`).join('\n')}`).join('\n')}\n\n`;
+        const qs = `Interview Questions:\n${currentResult.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`;
+        return basics + skills + plan + qs;
+    };
+
+    const downloadReport = () => {
+        const element = document.createElement("a");
+        const file = new Blob([generateExportText()], { type: 'text/plain' });
+        element.href = URL.createObjectURL(file);
+        element.download = `readiness-report-${currentResult.company || 'job'}.txt`;
+        document.body.appendChild(element); // Required for this to work in FireFox
+        element.click();
+        document.body.removeChild(element);
     };
 
     // --- Views ---
@@ -131,41 +212,60 @@ export const DashboardHome = () => {
     const renderResultsView = () => {
         if (!currentResult) return <div>No result found.</div>;
 
+        // Calculate top weak skills for "Action Next"
+        const weakSkills = currentResult.flatSkills.filter(s => getSkillStatus(s) === 'practice').slice(0, 3);
+
         return (
             <div className="space-y-6">
                 <button onClick={() => setView('HOME')} className="flex items-center text-slate-500 hover:text-primary transition-colors mb-4">
                     <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
                 </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Score & Export Header */}
+                <div className="flex flex-col md:flex-row gap-6 items-start md:items-stretch">
                     {/* Score Card */}
-                    <Card className="lg:col-span-1 flex flex-col items-center justify-center py-8">
-                        <CircularProgress value={currentResult.readinessScore} size={200} />
+                    <Card className="flex-1 flex flex-col items-center justify-center py-8">
+                        <CircularProgress value={dynamicScore} size={200} />
                         <div className="text-center mt-6">
                             <h3 className="text-xl font-bold text-slate-900">{currentResult.company || "Target Company"}</h3>
                             <p className="text-slate-500">{currentResult.role || "Target Role"}</p>
                         </div>
                     </Card>
 
-                    {/* Detected Skills */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
+                    {/* Detected Skills & Export Actions */}
+                    <Card className="flex-[2] flex flex-col">
+                        <CardHeader className="flex flex-row justify-between items-center">
                             <CardTitle>Skills Detected</CardTitle>
+                            <div className="flex gap-2">
+                                <button onClick={downloadReport} title="Download Report" className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"><Download size={18} /></button>
+                            </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex-1">
                             {Object.entries(currentResult.extractedSkills).length === 0 ? (
-                                <p className="text-slate-500 italic">No specific tech stack detected. Showing general plan.</p>
+                                <p className="text-slate-500 italic">No specific tech stack detected.</p>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-6">
+                                    <p className="text-sm text-slate-500">Click to toggle status. Score updates live!</p>
                                     {Object.entries(currentResult.extractedSkills).map(([category, skills]) => (
                                         <div key={category}>
                                             <h4 className="text-sm font-semibold text-slate-700 mb-2">{category}</h4>
                                             <div className="flex flex-wrap gap-2">
-                                                {skills.map(skill => (
-                                                    <span key={skill} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium border border-indigo-100 uppercase">
-                                                        {skill}
-                                                    </span>
-                                                ))}
+                                                {skills.map(skill => {
+                                                    const status = getSkillStatus(skill);
+                                                    return (
+                                                        <button
+                                                            key={skill}
+                                                            onClick={() => handleSkillToggle(skill)}
+                                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 transition-all duration-200 ${status === 'know'
+                                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                                                }`}
+                                                        >
+                                                            {status === 'know' ? <ThumbsUp size={12} /> : <ThumbsDown size={12} />}
+                                                            <span className="uppercase">{skill}</span>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))}
@@ -175,11 +275,36 @@ export const DashboardHome = () => {
                     </Card>
                 </div>
 
+                {/* Action Next Box */}
+                {weakSkills.length > 0 && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white rounded-full text-blue-600 shadow-sm">
+                                <AlertCircle size={24} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800">Action Next: Focus on Weak Areas</h3>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    You marked <strong>{weakSkills.join(', ')}</strong> as needing practice.
+                                    Start with Day 1 of your plan now!
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                            onClick={() => copyToClipboard(generateExportText())} // Quick action: Copy full plan
+                        >
+                            Copy Full Plan
+                        </button>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 7 Day Plan */}
                     <Card className="h-full">
-                        <CardHeader>
+                        <CardHeader className="flex flex-row justify-between items-center">
                             <CardTitle className="flex items-center gap-2"><Clock size={20} /> 7-Day Strategy</CardTitle>
+                            <button onClick={() => copyToClipboard(currentResult.plan.map(d => `${d.day}\n${d.items.join('\n')}`).join('\n\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -200,8 +325,9 @@ export const DashboardHome = () => {
 
                     {/* Round Checklist */}
                     <Card className="h-full">
-                        <CardHeader>
+                        <CardHeader className="flex flex-row justify-between items-center">
                             <CardTitle className="flex items-center gap-2"><CheckCircle size={20} /> Preparation Checklist</CardTitle>
+                            <button onClick={() => copyToClipboard(Object.entries(currentResult.checklist).map(([k, v]) => `${k}\n${v.join('\n')}`).join('\n\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-5">
@@ -225,8 +351,9 @@ export const DashboardHome = () => {
 
                 {/* Interview Questions */}
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row justify-between items-center">
                         <CardTitle className="flex items-center gap-2"><FileText size={20} /> Likely Interview Questions</CardTitle>
+                        <button onClick={() => copyToClipboard(currentResult.questions.join('\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
