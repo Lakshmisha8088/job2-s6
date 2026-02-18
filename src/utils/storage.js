@@ -17,9 +17,24 @@ export const saveAnalysisResult = (result) => {
 export const getAnalysisHistory = () => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
+        if (!stored) return [];
+
+        const rawHistory = JSON.parse(stored);
+
+        // Strict Validation: Filter out corrupt entries
+        const validHistory = rawHistory.filter(item => {
+            // Essential fields check
+            if (!item.id || !item.createdAt || !item.jdText) {
+                console.warn('Skipping corrupt history entry:', item);
+                return false;
+            }
+            return true;
+        });
+
+        return validHistory;
     } catch (e) {
         console.error('Failed to retrieve analysis history:', e);
+        // If critical parse error, return empty to allow app to function (user loses history but avoids crash)
         return [];
     }
 };

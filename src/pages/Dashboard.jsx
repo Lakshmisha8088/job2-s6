@@ -70,8 +70,9 @@ export const DashboardHome = () => {
             setSkillConfidence(savedConfidence);
 
             // Initial score calculation
-            const base = currentResult.baseScore || currentResult.readinessScore;
-            // If baseScore isn't saved yet (legacy), use readinessScore as base and save it
+            const base = currentResult.baseScore || currentResult.readinessScore || 35;
+
+            // Backfill baseScore if missing (legacy support)
             if (!currentResult.baseScore) {
                 updateAnalysisResult(currentResult.id, { baseScore: base });
             }
@@ -104,7 +105,8 @@ export const DashboardHome = () => {
         // Persist to storage
         updateAnalysisResult(currentResult.id, {
             skillConfidence: newConfidence,
-            readinessScore: Math.max(0, Math.min(100, base + (Object.values(newConfidence).filter(s => s === 'know').length * 2) - (Object.values(newConfidence).filter(s => s === 'practice').length * 2)))
+            finalScore: Math.max(0, Math.min(100, base + (Object.values(newConfidence).filter(s => s === 'know').length * 2) - (Object.values(newConfidence).filter(s => s === 'practice').length * 2))),
+            updatedAt: new Date().toISOString()
         });
     };
 
@@ -136,10 +138,14 @@ export const DashboardHome = () => {
 
     const generateExportText = () => {
         if (!currentResult) return '';
-        const basics = `Placement Readiness Report\nCompany: ${currentResult.company}\nRole: ${currentResult.role}\nScore: ${dynamicScore}/100\n\n`;
+        const basics = `Placement Readiness Report\nCompany: ${currentResult.company || 'N/A'}\nRole: ${currentResult.role || 'N/A'}\nScore: ${dynamicScore}/100\n\n`;
+
         const skills = `Skills:\n${currentResult.flatSkills.map(s => `- ${s} (${getSkillStatus(s)})`).join('\n')}\n\n`;
-        const plan = `7-Day Plan:\n${currentResult.plan.map(d => `${d.day}: ${d.focus}\n${d.items.map(i => `  - ${i}`).join('\n')}`).join('\n')}\n\n`;
+
+        const plan = `7-Day Plan:\n${currentResult.plan7Days.map(d => `${d.day}: ${d.focus}\n${d.tasks.map(t => `  - ${t}`).join('\n')}`).join('\n')}\n\n`;
+
         const qs = `Interview Questions:\n${currentResult.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`;
+
         return basics + skills + plan + qs;
     };
 
@@ -190,12 +196,24 @@ export const DashboardHome = () => {
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Job Description <span className="text-red-500">*</span></label>
                         <textarea
-                            className="w-full p-3 border border-slate-200 rounded-lg h-48 focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
+                            className={`w-full p-3 border rounded-lg h-48 focus:ring-2 focus:border-transparent outline-none resize-none transition-colors ${formData.jdText.length > 0 && formData.jdText.length < 200
+                                    ? 'border-amber-300 focus:ring-amber-200'
+                                    : 'border-slate-200 focus:ring-primary'
+                                }`}
                             placeholder="Paste the JD here..."
                             value={formData.jdText}
                             onChange={(e) => setFormData({ ...formData, jdText: e.target.value })}
                         ></textarea>
-                        <p className="text-xs text-slate-500 mt-1">Paste at least 500 characters for better analysis.</p>
+
+                        {/* Validation Warning */}
+                        {formData.jdText.length > 0 && formData.jdText.length < 200 && (
+                            <div className="mt-2 text-amber-600 text-sm flex items-center gap-2 bg-amber-50 p-2 rounded">
+                                <AlertCircle size={14} />
+                                <span>This JD is too short to analyze deeply. Paste full JD for better output.</span>
+                            </div>
+                        )}
+
+                        <p className="text-xs text-slate-500 mt-1 text-right">{formData.jdText.length} characters</p>
                     </div>
                     <button
                         className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -246,29 +264,44 @@ export const DashboardHome = () => {
                             ) : (
                                 <div className="space-y-6">
                                     <p className="text-sm text-slate-500">Click to toggle status. Score updates live!</p>
-                                    {Object.entries(currentResult.extractedSkills).map(([category, skills]) => (
-                                        <div key={category}>
-                                            <h4 className="text-sm font-semibold text-slate-700 mb-2">{category}</h4>
-                                            <div className="flex flex-wrap gap-2">
-                                                {skills.map(skill => {
-                                                    const status = getSkillStatus(skill);
-                                                    return (
-                                                        <button
-                                                            key={skill}
-                                                            onClick={() => handleSkillToggle(skill)}
-                                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 transition-all duration-200 ${status === 'know'
-                                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
-                                                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                                                                }`}
-                                                        >
-                                                            {status === 'know' ? <ThumbsUp size={12} /> : <ThumbsDown size={12} />}
-                                                            <span className="uppercase">{skill}</span>
-                                                        </button>
-                                                    );
-                                                })}
+                                    {Object.entries(currentResult.extractedSkills).map(([categoryKey, skills]) => {
+                                        if (skills.length === 0) return null;
+                                        // Display Name Mapping
+                                        const displayParams = {
+                                            coreCS: 'Core CS',
+                                            languages: 'Languages',
+                                            web: 'Web Development',
+                                            data: 'Data & Databases',
+                                            cloud: 'Cloud & DevOps',
+                                            testing: 'Testing',
+                                            other: 'Other Skills'
+                                        };
+                                        const displayName = displayParams[categoryKey] || categoryKey;
+
+                                        return (
+                                            <div key={categoryKey}>
+                                                <h4 className="text-sm font-semibold text-slate-700 mb-2">{displayName}</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {skills.map(skill => {
+                                                        const status = getSkillStatus(skill);
+                                                        return (
+                                                            <button
+                                                                key={skill}
+                                                                onClick={() => handleSkillToggle(skill)}
+                                                                className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 transition-all duration-200 ${status === 'know'
+                                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                                                    }`}
+                                                            >
+                                                                {status === 'know' ? <ThumbsUp size={12} /> : <ThumbsDown size={12} />}
+                                                                <span className="uppercase">{skill}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             )}
                         </CardContent>
@@ -380,18 +413,19 @@ export const DashboardHome = () => {
                     <Card className="h-full">
                         <CardHeader className="flex flex-row justify-between items-center">
                             <CardTitle className="flex items-center gap-2"><Clock size={20} /> 7-Day Strategy</CardTitle>
-                            <button onClick={() => copyToClipboard(currentResult.plan.map(d => `${d.day}\n${d.items.join('\n')}`).join('\n\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
+                            <CardTitle className="flex items-center gap-2"><Clock size={20} /> 7-Day Strategy</CardTitle>
+                            <button onClick={() => copyToClipboard(currentResult.plan7Days.map(d => `${d.day}\n${d.tasks.join('\n')}`).join('\n\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {currentResult.plan.map((day, i) => (
+                                {currentResult.plan7Days && currentResult.plan7Days.map((day, i) => (
                                     <div key={i} className="border-b border-slate-100 last:border-0 pb-3 last:pb-0">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="font-bold text-indigo-600 text-sm">{day.day}</span>
                                             <span className="text-xs font-semibold bg-slate-100 px-2 py-0.5 rounded text-slate-600">{day.focus}</span>
                                         </div>
                                         <ul className="list-disc list-inside text-sm text-slate-600 pl-1">
-                                            {day.items.map((item, idx) => <li key={idx}>{item}</li>)}
+                                            {day.tasks.map((item, idx) => <li key={idx}>{item}</li>)}
                                         </ul>
                                     </div>
                                 ))}
@@ -403,23 +437,47 @@ export const DashboardHome = () => {
                     <Card className="h-full">
                         <CardHeader className="flex flex-row justify-between items-center">
                             <CardTitle className="flex items-center gap-2"><CheckCircle size={20} /> Preparation Checklist</CardTitle>
-                            <button onClick={() => copyToClipboard(Object.entries(currentResult.checklist).map(([k, v]) => `${k}\n${v.join('\n')}`).join('\n\n'))} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
+                            <CardTitle className="flex items-center gap-2"><CheckCircle size={20} /> Preparation Checklist</CardTitle>
+                            <button onClick={() => {
+                                const text = Array.isArray(currentResult.checklist)
+                                    ? currentResult.checklist.map(r => `${r.roundTitle}\n${r.items.join('\n')}`).join('\n\n')
+                                    : Object.entries(currentResult.checklist).map(([k, v]) => `${k}\n${v.join('\n')}`).join('\n\n');
+                                copyToClipboard(text);
+                            }} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><Copy size={12} /> Copy</button>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-5">
-                                {Object.entries(currentResult.checklist).map(([round, items], i) => (
-                                    <div key={i}>
-                                        <h4 className="font-semibold text-slate-800 text-sm mb-2">{round}</h4>
-                                        <div className="space-y-1.5">
-                                            {items.map((item, idx) => (
-                                                <div key={idx} className="flex items-start gap-2 text-sm text-slate-600">
-                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></div>
-                                                    <span>{item}</span>
-                                                </div>
-                                            ))}
+                                {/* Adjusted for Array format in new schema */}
+                                {Array.isArray(currentResult.checklist) ? (
+                                    currentResult.checklist.map((roundObj, i) => (
+                                        <div key={i}>
+                                            <h4 className="font-semibold text-slate-800 text-sm mb-2">{roundObj.roundTitle}</h4>
+                                            <div className="space-y-1.5">
+                                                {roundObj.items.map((item, idx) => (
+                                                    <div key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></div>
+                                                        <span>{item}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                ) : (
+                                    /* Legacy Object Fallback */
+                                    Object.entries(currentResult.checklist).map(([round, items], i) => (
+                                        <div key={i}>
+                                            <h4 className="font-semibold text-slate-800 text-sm mb-2">{round}</h4>
+                                            <div className="space-y-1.5">
+                                                {items.map((item, idx) => (
+                                                    <div key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></div>
+                                                        <span>{item}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </CardContent>
                     </Card>
